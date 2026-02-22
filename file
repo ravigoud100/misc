@@ -1,0 +1,1313 @@
+"<!DOCTYPE html>
+<html lang=\"en\">
+<head>
+    <meta charset=\"UTF-8\">
+    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
+    <title>FlashRide Fleet Analytics Dashboard</title>
+    <script src=\"https://cdn.jsdelivr.net/npm/chart.js\"></script>
+    <script src=\"https://cdn.jsdelivr.net/npm/chartjs-plugin-trendline\"></script>
+    <link href=\"https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap\" rel=\"stylesheet\">
+    <style>
+        :root {
+            --bg-primary: #0a0e14;
+            --bg-secondary: #12181f;
+            --bg-tertiary: #1a222c;
+            --bg-card: #151c25;
+            --accent-primary: #00d4aa;
+            --accent-secondary: #0ea5e9;
+            --accent-warning: #f59e0b;
+            --accent-danger: #ef4444;
+            --accent-purple: #a855f7;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border-color: #1e293b;
+            --glass-bg: rgba(21, 28, 37, 0.85);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .dashboard-container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+
+        /* Header */
+        .header {
+            margin-bottom: 40px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 24px;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .brand-text h1 {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: linear-gradient(90deg, var(--text-primary), var(--accent-primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .brand-text p {
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 400;
+        }
+
+        /* KPI Cards */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .kpi-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--accent-primary);
+        }
+
+        .kpi-card.warning::before { background: var(--accent-warning); }
+        .kpi-card.danger::before { background: var(--accent-danger); }
+        .kpi-card.info::before { background: var(--accent-secondary); }
+        .kpi-card.purple::before { background: var(--accent-purple); }
+
+        .kpi-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .kpi-value {
+            font-size: 32px;
+            font-weight: 700;
+            font-family: 'IBM Plex Mono', monospace;
+            color: var(--text-primary);
+        }
+
+        .kpi-subtext {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* Filters */
+        .filters-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 32px;
+        }
+
+        .filters-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+        }
+
+        .filter-group label {
+            display: block;
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .filter-group select {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .filter-group select:hover {
+            border-color: var(--accent-primary);
+        }
+
+        .filter-group select:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.15);
+        }
+
+        /* Charts Grid */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+        }
+
+        @media (max-width: 1200px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .chart-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .chart-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .chart-card.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
+        .chart-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .chart-subtitle {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .chart-badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-analysis { background: rgba(0, 212, 170, 0.15); color: var(--accent-primary); }
+        .badge-correlation { background: rgba(14, 165, 233, 0.15); color: var(--accent-secondary); }
+        .badge-hotspot { background: rgba(239, 68, 68, 0.15); color: var(--accent-danger); }
+        .badge-impact { background: rgba(168, 85, 247, 0.15); color: var(--accent-purple); }
+
+        .chart-container {
+            position: relative;
+            height: 320px;
+        }
+
+        .chart-insight {
+            margin-top: 16px;
+            padding: 14px 16px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            border-left: 3px solid var(--accent-primary);
+        }
+
+        .chart-insight p {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .chart-insight strong {
+            color: var(--accent-primary);
+        }
+
+        /* Legend custom */
+        .custom-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        /* Metric highlight */
+        .metric-highlight {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 13px;
+        }
+
+        .metric-highlight.positive { color: var(--accent-primary); }
+        .metric-highlight.negative { color: var(--accent-danger); }
+        .metric-highlight.neutral { color: var(--accent-secondary); }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 48px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border-color);
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .chart-card {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        .chart-card:nth-child(1) { animation-delay: 0.1s; }
+        .chart-card:nth-child(2) { animation-delay: 0.2s; }
+        .chart-card:nth-child(3) { animation-delay: 0.3s; }
+        .chart-card:nth-child(4) { animation-delay: 0.4s; }
+        .chart-card:nth-child(5) { animation-delay: 0.5s; }
+
+        /* Heatmap styles */
+        .heatmap-container {
+            display: grid;
+            grid-template-columns: auto repeat(7, 1fr);
+            gap: 4px;
+            font-size: 11px;
+        }
+
+        .heatmap-cell {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 10px;
+            transition: transform 0.15s;
+        }
+
+        .heatmap-cell:hover {
+            transform: scale(1.1);
+            z-index: 1;
+        }
+
+        .heatmap-label {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 8px;
+            color: var(--text-muted);
+            font-size: 10px;
+        }
+
+        .heatmap-header {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 10px;
+            padding: 4px;
+        }
+
+        /* Stats row */
+        .stats-row {
+            display: flex;
+            gap: 24px;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class=\"dashboard-container\">
+        <!-- Header -->
+        <header class=\"header\">
+            <div class=\"header-top\">
+                <div class=\"logo-section\">
+                    <div class=\"logo-icon\">⚡</div>
+                    <div class=\"brand-text\">
+                        <h1>FlashRide Fleet Analytics</h1>
+                        <p>Battery Operations & Revenue Impact Dashboard</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KPI Cards -->
+            <div class=\"kpi-grid\" id=\"kpiGrid\">
+                <!-- Populated by JS -->
+            </div>
+        </header>
+
+        <!-- Filters -->
+        <section class=\"filters-section\">
+            <div class=\"filters-title\">
+                <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\">
+                    <polygon points=\"22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3\"></polygon>
+                </svg>
+                Interactive Filters
+            </div>
+            <div class=\"filters-grid\">
+                <div class=\"filter-group\">
+                    <label>Zone</label>
+                    <select id=\"zoneFilter\" onchange=\"applyFilters()\">
+                        <option value=\"all\">All Zones</option>
+                    </select>
+                </div>
+                <div class=\"filter-group\">
+                    <label>Day of Week</label>
+                    <select id=\"dayFilter\" onchange=\"applyFilters()\">
+                        <option value=\"all\">All Days</option>
+                    </select>
+                </div>
+                <div class=\"filter-group\">
+                    <label>Weather Condition</label>
+                    <select id=\"weatherFilter\" onchange=\"applyFilters()\">
+                        <option value=\"all\">All Conditions</option>
+                    </select>
+                </div>
+                <div class=\"filter-group\">
+                    <label>Peak Hour</label>
+                    <select id=\"peakFilter\" onchange=\"applyFilters()\">
+                        <option value=\"all\">All Hours</option>
+                        <option value=\"1\">Peak Hours Only</option>
+                        <option value=\"0\">Off-Peak Only</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <!-- Charts Grid -->
+        <div class=\"charts-grid\">
+            <!-- Chart 1: Downtime Attribution -->
+            <div class=\"chart-card\">
+                <div class=\"chart-header\">
+                    <div>
+                        <h3 class=\"chart-title\">Downtime Attribution Analysis</h3>
+                        <p class=\"chart-subtitle\">Decomposition of total downtime by cause</p>
+                    </div>
+                    <span class=\"chart-badge badge-analysis\">Analysis</span>
+                </div>
+                <div class=\"chart-container\">
+                    <canvas id=\"downtimeChart\"></canvas>
+                </div>
+                <div class=\"chart-insight\" id=\"downtimeInsight\">
+                    <p>Loading insight...</p>
+                </div>
+            </div>
+
+            <!-- Chart 2: Charging Response Time Impact -->
+            <div class=\"chart-card\">
+                <div class=\"chart-header\">
+                    <div>
+                        <h3 class=\"chart-title\">Charging Response Time Impact</h3>
+                        <p class=\"chart-subtitle\">Correlation between response time and downtime</p>
+                    </div>
+                    <span class=\"chart-badge badge-correlation\">Correlation</span>
+                </div>
+                <div class=\"chart-container\">
+                    <canvas id=\"responseChart\"></canvas>
+                </div>
+                <div class=\"chart-insight\" id=\"responseInsight\">
+                    <p>Loading insight...</p>
+                </div>
+            </div>
+
+            <!-- Chart 3: Zone-Level Battery Unavailability -->
+            <div class=\"chart-card\">
+                <div class=\"chart-header\">
+                    <div>
+                        <h3 class=\"chart-title\">Zone Battery Unavailability Hotspots</h3>
+                        <p class=\"chart-subtitle\">Zones with highest battery-related unavailability</p>
+                    </div>
+                    <span class=\"chart-badge badge-hotspot\">Hotspot</span>
+                </div>
+                <div class=\"chart-container\">
+                    <canvas id=\"zoneChart\"></canvas>
+                </div>
+                <div class=\"chart-insight\" id=\"zoneInsight\">
+                    <p>Loading insight...</p>
+                </div>
+            </div>
+
+            <!-- Chart 4: Battery Health vs Maintenance -->
+            <div class=\"chart-card\">
+                <div class=\"chart-header\">
+                    <div>
+                        <h3 class=\"chart-title\">Battery Health vs Maintenance Downtime</h3>
+                        <p class=\"chart-subtitle\">Impact of battery health on maintenance requirements</p>
+                    </div>
+                    <span class=\"chart-badge badge-impact\">Impact</span>
+                </div>
+                <div class=\"chart-container\">
+                    <canvas id=\"healthChart\"></canvas>
+                </div>
+                <div class=\"chart-insight\" id=\"healthInsight\">
+                    <p>Loading insight...</p>
+                </div>
+            </div>
+
+            <!-- Chart 5: Peak Hour Downtime vs Revenue -->
+            <div class=\"chart-card full-width\">
+                <div class=\"chart-header\">
+                    <div>
+                        <h3 class=\"chart-title\">Peak Hour Downtime Revenue Impact</h3>
+                        <p class=\"chart-subtitle\">How downtime during peak hours affects daily revenue</p>
+                    </div>
+                    <span class=\"chart-badge badge-analysis\">Analysis</span>
+                </div>
+                <div class=\"chart-container\" style=\"height: 380px;\">
+                    <canvas id=\"revenueChart\"></canvas>
+                </div>
+                <div class=\"chart-insight\" id=\"revenueInsight\">
+                    <p>Loading insight...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class=\"footer\">
+            <p>FlashRide Fleet Analytics Dashboard | Data-Driven Operations Intelligence | Generated for Academic & Executive Evaluation</p>
+        </footer>
+    </div>
+
+    <script>
+        // Embedded FlashRide Dataset
+        const rawData = [
+            {\"Scooter_ID\":\"SCOO180\",\"Zone_ID\":\"Z4\",\"Battery_Level\":56,\"Battery_Health\":78,\"Ride_Count\":17,\"Ride_Duration_Min\":19,\"Ride_Revenue\":19.24,\"Charge_Response_Time\":30,\"Charging_Duration\":147,\"Downtime_Minutes\":82,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":82,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Cloudy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Saturday\",\"Total_Daily_Revenue\":327.08,\"Distance_Traveled_KM\":13.13,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO149\",\"Zone_ID\":\"Z5\",\"Battery_Level\":28,\"Battery_Health\":52,\"Ride_Count\":12,\"Ride_Duration_Min\":26,\"Ride_Revenue\":14.03,\"Charge_Response_Time\":167,\"Charging_Duration\":82,\"Downtime_Minutes\":138,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":1,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":1,\"Day_of_Week\":\"Thursday\",\"Total_Daily_Revenue\":168.36,\"Distance_Traveled_KM\":9.64,\"Battery_Replacement_Required\":1},
+            {\"Scooter_ID\":\"SCOO164\",\"Zone_ID\":\"Z7\",\"Battery_Level\":62,\"Battery_Health\":71,\"Ride_Count\":15,\"Ride_Duration_Min\":29,\"Ride_Revenue\":20.41,\"Charge_Response_Time\":179,\"Charging_Duration\":59,\"Downtime_Minutes\":210,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":61,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Rainy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Friday\",\"Total_Daily_Revenue\":306.15,\"Distance_Traveled_KM\":3.8,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO269\",\"Zone_ID\":\"Z4\",\"Battery_Level\":59,\"Battery_Health\":52,\"Ride_Count\":9,\"Ride_Duration_Min\":41,\"Ride_Revenue\":37.94,\"Charge_Response_Time\":82,\"Charging_Duration\":62,\"Downtime_Minutes\":55,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":3,\"Peak_Hour_Flag\":1,\"Weather_Condition\":\"Rainy\",\"Maintenance_Flag\":1,\"Day_of_Week\":\"Thursday\",\"Total_Daily_Revenue\":341.46,\"Distance_Traveled_KM\":12.32,\"Battery_Replacement_Required\":1},
+            {\"Scooter_ID\":\"SCOO259\",\"Zone_ID\":\"Z10\",\"Battery_Level\":13,\"Battery_Health\":75,\"Ride_Count\":19,\"Ride_Duration_Min\":6,\"Ride_Revenue\":5.87,\"Charge_Response_Time\":197,\"Charging_Duration\":52,\"Downtime_Minutes\":213,\"Is_Available\":0,\"Low_Battery_Flag\":1,\"Collection_Delay_Min\":46,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Thursday\",\"Total_Daily_Revenue\":111.53,\"Distance_Traveled_KM\":4.62,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO268\",\"Zone_ID\":\"Z10\",\"Battery_Level\":8,\"Battery_Health\":51,\"Ride_Count\":8,\"Ride_Duration_Min\":10,\"Ride_Revenue\":6.46,\"Charge_Response_Time\":63,\"Charging_Duration\":88,\"Downtime_Minutes\":66,\"Is_Available\":0,\"Low_Battery_Flag\":1,\"Collection_Delay_Min\":33,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Rainy\",\"Maintenance_Flag\":1,\"Day_of_Week\":\"Thursday\",\"Total_Daily_Revenue\":51.68,\"Distance_Traveled_KM\":11.18,\"Battery_Replacement_Required\":1},
+            {\"Scooter_ID\":\"SCOO59\",\"Zone_ID\":\"Z7\",\"Battery_Level\":19,\"Battery_Health\":57,\"Ride_Count\":13,\"Ride_Duration_Min\":18,\"Ride_Revenue\":11.47,\"Charge_Response_Time\":199,\"Charging_Duration\":84,\"Downtime_Minutes\":253,\"Is_Available\":0,\"Low_Battery_Flag\":1,\"Collection_Delay_Min\":84,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Rainy\",\"Maintenance_Flag\":1,\"Day_of_Week\":\"Wednesday\",\"Total_Daily_Revenue\":149.11,\"Distance_Traveled_KM\":8.56,\"Battery_Replacement_Required\":1},
+            {\"Scooter_ID\":\"SCOO59\",\"Zone_ID\":\"Z10\",\"Battery_Level\":28,\"Battery_Health\":75,\"Ride_Count\":16,\"Ride_Duration_Min\":29,\"Ride_Revenue\":20.2,\"Charge_Response_Time\":50,\"Charging_Duration\":59,\"Downtime_Minutes\":64,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":44,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Cloudy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Saturday\",\"Total_Daily_Revenue\":323.2,\"Distance_Traveled_KM\":6.93,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO176\",\"Zone_ID\":\"Z3\",\"Battery_Level\":5,\"Battery_Health\":93,\"Ride_Count\":15,\"Ride_Duration_Min\":12,\"Ride_Revenue\":6.05,\"Charge_Response_Time\":90,\"Charging_Duration\":77,\"Downtime_Minutes\":64,\"Is_Available\":0,\"Low_Battery_Flag\":1,\"Collection_Delay_Min\":4,\"Peak_Hour_Flag\":1,\"Weather_Condition\":\"Rainy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Friday\",\"Total_Daily_Revenue\":90.75,\"Distance_Traveled_KM\":2.62,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO60\",\"Zone_ID\":\"Z7\",\"Battery_Level\":11,\"Battery_Health\":58,\"Ride_Count\":5,\"Ride_Duration_Min\":12,\"Ride_Revenue\":9.78,\"Charge_Response_Time\":57,\"Charging_Duration\":106,\"Downtime_Minutes\":114,\"Is_Available\":0,\"Low_Battery_Flag\":1,\"Collection_Delay_Min\":87,\"Peak_Hour_Flag\":1,\"Weather_Condition\":\"Rainy\",\"Maintenance_Flag\":1,\"Day_of_Week\":\"Saturday\",\"Total_Daily_Revenue\":48.9,\"Distance_Traveled_KM\":13.42,\"Battery_Replacement_Required\":1},
+            {\"Scooter_ID\":\"SCOO258\",\"Zone_ID\":\"Z2\",\"Battery_Level\":69,\"Battery_Health\":84,\"Ride_Count\":7,\"Ride_Duration_Min\":41,\"Ride_Revenue\":48.39,\"Charge_Response_Time\":10,\"Charging_Duration\":49,\"Downtime_Minutes\":69,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":89,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Rainy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Friday\",\"Total_Daily_Revenue\":338.73,\"Distance_Traveled_KM\":7.91,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO287\",\"Zone_ID\":\"Z4\",\"Battery_Level\":13,\"Battery_Health\":64,\"Ride_Count\":16,\"Ride_Duration_Min\":19,\"Ride_Revenue\":10.97,\"Charge_Response_Time\":188,\"Charging_Duration\":107,\"Downtime_Minutes\":253,\"Is_Available\":0,\"Low_Battery_Flag\":1,\"Collection_Delay_Min\":95,\"Peak_Hour_Flag\":1,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Friday\",\"Total_Daily_Revenue\":175.52,\"Distance_Traveled_KM\":8.12,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO96\",\"Zone_ID\":\"Z5\",\"Battery_Level\":98,\"Battery_Health\":86,\"Ride_Count\":19,\"Ride_Duration_Min\":27,\"Ride_Revenue\":24.92,\"Charge_Response_Time\":180,\"Charging_Duration\":73,\"Downtime_Minutes\":185,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":35,\"Peak_Hour_Flag\":1,\"Weather_Condition\":\"Cloudy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Friday\",\"Total_Daily_Revenue\":473.48,\"Distance_Traveled_KM\":5.06,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO21\",\"Zone_ID\":\"Z8\",\"Battery_Level\":90,\"Battery_Health\":77,\"Ride_Count\":18,\"Ride_Duration_Min\":6,\"Ride_Revenue\":5.62,\"Charge_Response_Time\":194,\"Charging_Duration\":178,\"Downtime_Minutes\":191,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":27,\"Peak_Hour_Flag\":1,\"Weather_Condition\":\"Rainy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Friday\",\"Total_Daily_Revenue\":101.16,\"Distance_Traveled_KM\":13.37,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO38\",\"Zone_ID\":\"Z7\",\"Battery_Level\":96,\"Battery_Health\":74,\"Ride_Count\":5,\"Ride_Duration_Min\":43,\"Ride_Revenue\":48.8,\"Charge_Response_Time\":130,\"Charging_Duration\":71,\"Downtime_Minutes\":161,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":61,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Friday\",\"Total_Daily_Revenue\":244.0,\"Distance_Traveled_KM\":13.05,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO51\",\"Zone_ID\":\"Z5\",\"Battery_Level\":74,\"Battery_Health\":57,\"Ride_Count\":9,\"Ride_Duration_Min\":31,\"Ride_Revenue\":24.56,\"Charge_Response_Time\":60,\"Charging_Duration\":103,\"Downtime_Minutes\":147,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":117,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":1,\"Day_of_Week\":\"Friday\",\"Total_Daily_Revenue\":221.04,\"Distance_Traveled_KM\":6.65,\"Battery_Replacement_Required\":1},
+            {\"Scooter_ID\":\"SCOO148\",\"Zone_ID\":\"Z7\",\"Battery_Level\":66,\"Battery_Health\":98,\"Ride_Count\":6,\"Ride_Duration_Min\":16,\"Ride_Revenue\":10.82,\"Charge_Response_Time\":140,\"Charging_Duration\":157,\"Downtime_Minutes\":210,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":100,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Thursday\",\"Total_Daily_Revenue\":64.92,\"Distance_Traveled_KM\":4.73,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO131\",\"Zone_ID\":\"Z6\",\"Battery_Level\":6,\"Battery_Health\":51,\"Ride_Count\":9,\"Ride_Duration_Min\":32,\"Ride_Revenue\":17.15,\"Charge_Response_Time\":138,\"Charging_Duration\":170,\"Downtime_Minutes\":109,\"Is_Available\":0,\"Low_Battery_Flag\":1,\"Collection_Delay_Min\":1,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Rainy\",\"Maintenance_Flag\":1,\"Day_of_Week\":\"Friday\",\"Total_Daily_Revenue\":154.35,\"Distance_Traveled_KM\":14.8,\"Battery_Replacement_Required\":1},
+            {\"Scooter_ID\":\"SCOO235\",\"Zone_ID\":\"Z7\",\"Battery_Level\":36,\"Battery_Health\":53,\"Ride_Count\":5,\"Ride_Duration_Min\":15,\"Ride_Revenue\":11.38,\"Charge_Response_Time\":47,\"Charging_Duration\":68,\"Downtime_Minutes\":85,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":68,\"Peak_Hour_Flag\":1,\"Weather_Condition\":\"Rainy\",\"Maintenance_Flag\":1,\"Day_of_Week\":\"Friday\",\"Total_Daily_Revenue\":56.9,\"Distance_Traveled_KM\":6.58,\"Battery_Replacement_Required\":1},
+            {\"Scooter_ID\":\"SCOO90\",\"Zone_ID\":\"Z5\",\"Battery_Level\":20,\"Battery_Health\":82,\"Ride_Count\":10,\"Ride_Duration_Min\":13,\"Ride_Revenue\":9.42,\"Charge_Response_Time\":102,\"Charging_Duration\":47,\"Downtime_Minutes\":91,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":19,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Cloudy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Friday\",\"Total_Daily_Revenue\":94.2,\"Distance_Traveled_KM\":10.96,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO98\",\"Zone_ID\":\"Z4\",\"Battery_Level\":23,\"Battery_Health\":69,\"Ride_Count\":13,\"Ride_Duration_Min\":36,\"Ride_Revenue\":20.42,\"Charge_Response_Time\":170,\"Charging_Duration\":172,\"Downtime_Minutes\":178,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":38,\"Peak_Hour_Flag\":1,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Saturday\",\"Total_Daily_Revenue\":265.46,\"Distance_Traveled_KM\":10.46,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO276\",\"Zone_ID\":\"Z3\",\"Battery_Level\":61,\"Battery_Health\":74,\"Ride_Count\":14,\"Ride_Duration_Min\":27,\"Ride_Revenue\":23.73,\"Charge_Response_Time\":108,\"Charging_Duration\":51,\"Downtime_Minutes\":93,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":15,\"Peak_Hour_Flag\":1,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Saturday\",\"Total_Daily_Revenue\":332.22,\"Distance_Traveled_KM\":8.23,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO121\",\"Zone_ID\":\"Z9\",\"Battery_Level\":6,\"Battery_Health\":50,\"Ride_Count\":15,\"Ride_Duration_Min\":16,\"Ride_Revenue\":14.25,\"Charge_Response_Time\":18,\"Charging_Duration\":143,\"Downtime_Minutes\":6,\"Is_Available\":0,\"Low_Battery_Flag\":1,\"Collection_Delay_Min\":18,\"Peak_Hour_Flag\":1,\"Weather_Condition\":\"Cloudy\",\"Maintenance_Flag\":1,\"Day_of_Week\":\"Saturday\",\"Total_Daily_Revenue\":213.75,\"Distance_Traveled_KM\":12.99,\"Battery_Replacement_Required\":1},
+            {\"Scooter_ID\":\"SCOO162\",\"Zone_ID\":\"Z9\",\"Battery_Level\":58,\"Battery_Health\":82,\"Ride_Count\":5,\"Ride_Duration_Min\":28,\"Ride_Revenue\":30.68,\"Charge_Response_Time\":173,\"Charging_Duration\":148,\"Downtime_Minutes\":226,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":83,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Rainy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Friday\",\"Total_Daily_Revenue\":153.4,\"Distance_Traveled_KM\":14.16,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO77\",\"Zone_ID\":\"Z8\",\"Battery_Level\":29,\"Battery_Health\":78,\"Ride_Count\":6,\"Ride_Duration_Min\":22,\"Ride_Revenue\":13.48,\"Charge_Response_Time\":63,\"Charging_Duration\":112,\"Downtime_Minutes\":65,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":32,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Cloudy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Saturday\",\"Total_Daily_Revenue\":80.88,\"Distance_Traveled_KM\":11.09,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO2\",\"Zone_ID\":\"Z5\",\"Battery_Level\":37,\"Battery_Health\":97,\"Ride_Count\":10,\"Ride_Duration_Min\":16,\"Ride_Revenue\":13.7,\"Charge_Response_Time\":128,\"Charging_Duration\":66,\"Downtime_Minutes\":207,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":109,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Rainy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Thursday\",\"Total_Daily_Revenue\":137.0,\"Distance_Traveled_KM\":6.5,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO200\",\"Zone_ID\":\"Z10\",\"Battery_Level\":58,\"Battery_Health\":57,\"Ride_Count\":9,\"Ride_Duration_Min\":31,\"Ride_Revenue\":24.93,\"Charge_Response_Time\":39,\"Charging_Duration\":141,\"Downtime_Minutes\":36,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":27,\"Peak_Hour_Flag\":1,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":1,\"Day_of_Week\":\"Thursday\",\"Total_Daily_Revenue\":224.37,\"Distance_Traveled_KM\":3.73,\"Battery_Replacement_Required\":1},
+            {\"Scooter_ID\":\"SCOO277\",\"Zone_ID\":\"Z4\",\"Battery_Level\":65,\"Battery_Health\":97,\"Ride_Count\":5,\"Ride_Duration_Min\":23,\"Ride_Revenue\":20.71,\"Charge_Response_Time\":26,\"Charging_Duration\":90,\"Downtime_Minutes\":112,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":116,\"Peak_Hour_Flag\":1,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Friday\",\"Total_Daily_Revenue\":103.55,\"Distance_Traveled_KM\":14.34,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO142\",\"Zone_ID\":\"Z3\",\"Battery_Level\":97,\"Battery_Health\":98,\"Ride_Count\":5,\"Ride_Duration_Min\":35,\"Ride_Revenue\":41.11,\"Charge_Response_Time\":125,\"Charging_Duration\":111,\"Downtime_Minutes\":112,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":17,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Cloudy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Saturday\",\"Total_Daily_Revenue\":205.55,\"Distance_Traveled_KM\":12.82,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO100\",\"Zone_ID\":\"Z10\",\"Battery_Level\":71,\"Battery_Health\":89,\"Ride_Count\":19,\"Ride_Duration_Min\":28,\"Ride_Revenue\":18.09,\"Charge_Response_Time\":95,\"Charging_Duration\":171,\"Downtime_Minutes\":91,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":26,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Rainy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Thursday\",\"Total_Daily_Revenue\":343.71,\"Distance_Traveled_KM\":11.37,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO211\",\"Zone_ID\":\"Z9\",\"Battery_Level\":37,\"Battery_Health\":58,\"Ride_Count\":11,\"Ride_Duration_Min\":43,\"Ride_Revenue\":30.34,\"Charge_Response_Time\":35,\"Charging_Duration\":143,\"Downtime_Minutes\":54,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":49,\"Peak_Hour_Flag\":1,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":1,\"Day_of_Week\":\"Wednesday\",\"Total_Daily_Revenue\":333.74,\"Distance_Traveled_KM\":2.14,\"Battery_Replacement_Required\":1},
+            {\"Scooter_ID\":\"SCOO256\",\"Zone_ID\":\"Z3\",\"Battery_Level\":11,\"Battery_Health\":85,\"Ride_Count\":18,\"Ride_Duration_Min\":24,\"Ride_Revenue\":22.92,\"Charge_Response_Time\":153,\"Charging_Duration\":159,\"Downtime_Minutes\":209,\"Is_Available\":0,\"Low_Battery_Flag\":1,\"Collection_Delay_Min\":86,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Rainy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Saturday\",\"Total_Daily_Revenue\":412.56,\"Distance_Traveled_KM\":2.32,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO256\",\"Zone_ID\":\"Z7\",\"Battery_Level\":91,\"Battery_Health\":71,\"Ride_Count\":18,\"Ride_Duration_Min\":29,\"Ride_Revenue\":17.65,\"Charge_Response_Time\":134,\"Charging_Duration\":102,\"Downtime_Minutes\":161,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":57,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Rainy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Friday\",\"Total_Daily_Revenue\":317.7,\"Distance_Traveled_KM\":12.52,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO186\",\"Zone_ID\":\"Z10\",\"Battery_Level\":58,\"Battery_Health\":92,\"Ride_Count\":9,\"Ride_Duration_Min\":41,\"Ride_Revenue\":35.49,\"Charge_Response_Time\":69,\"Charging_Duration\":152,\"Downtime_Minutes\":43,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":4,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Rainy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Friday\",\"Total_Daily_Revenue\":319.41,\"Distance_Traveled_KM\":1.72,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO151\",\"Zone_ID\":\"Z5\",\"Battery_Level\":98,\"Battery_Health\":96,\"Ride_Count\":8,\"Ride_Duration_Min\":39,\"Ride_Revenue\":36.9,\"Charge_Response_Time\":153,\"Charging_Duration\":57,\"Downtime_Minutes\":236,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":113,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Rainy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Thursday\",\"Total_Daily_Revenue\":295.2,\"Distance_Traveled_KM\":1.57,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO80\",\"Zone_ID\":\"Z5\",\"Battery_Level\":67,\"Battery_Health\":68,\"Ride_Count\":14,\"Ride_Duration_Min\":32,\"Ride_Revenue\":32.67,\"Charge_Response_Time\":126,\"Charging_Duration\":106,\"Downtime_Minutes\":118,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":22,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Thursday\",\"Total_Daily_Revenue\":457.38,\"Distance_Traveled_KM\":1.81,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO110\",\"Zone_ID\":\"Z7\",\"Battery_Level\":5,\"Battery_Health\":96,\"Ride_Count\":10,\"Ride_Duration_Min\":38,\"Ride_Revenue\":25.38,\"Charge_Response_Time\":57,\"Charging_Duration\":133,\"Downtime_Minutes\":130,\"Is_Available\":0,\"Low_Battery_Flag\":1,\"Collection_Delay_Min\":103,\"Peak_Hour_Flag\":1,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Friday\",\"Total_Daily_Revenue\":253.8,\"Distance_Traveled_KM\":14.37,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO138\",\"Zone_ID\":\"Z1\",\"Battery_Level\":68,\"Battery_Health\":54,\"Ride_Count\":7,\"Ride_Duration_Min\":26,\"Ride_Revenue\":26.29,\"Charge_Response_Time\":85,\"Charging_Duration\":130,\"Downtime_Minutes\":111,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":56,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":1,\"Day_of_Week\":\"Thursday\",\"Total_Daily_Revenue\":184.03,\"Distance_Traveled_KM\":2.32,\"Battery_Replacement_Required\":1},
+            {\"Scooter_ID\":\"SCOO212\",\"Zone_ID\":\"Z7\",\"Battery_Level\":98,\"Battery_Health\":95,\"Ride_Count\":14,\"Ride_Duration_Min\":9,\"Ride_Revenue\":7.49,\"Charge_Response_Time\":185,\"Charging_Duration\":129,\"Downtime_Minutes\":193,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":38,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Rainy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Saturday\",\"Total_Daily_Revenue\":104.86,\"Distance_Traveled_KM\":7.07,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO214\",\"Zone_ID\":\"Z8\",\"Battery_Level\":27,\"Battery_Health\":59,\"Ride_Count\":8,\"Ride_Duration_Min\":9,\"Ride_Revenue\":10.09,\"Charge_Response_Time\":147,\"Charging_Duration\":140,\"Downtime_Minutes\":117,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":0,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":1,\"Day_of_Week\":\"Saturday\",\"Total_Daily_Revenue\":80.72,\"Distance_Traveled_KM\":3.28,\"Battery_Replacement_Required\":1},
+            {\"Scooter_ID\":\"SCOO29\",\"Zone_ID\":\"Z10\",\"Battery_Level\":28,\"Battery_Health\":65,\"Ride_Count\":15,\"Ride_Duration_Min\":6,\"Ride_Revenue\":3.11,\"Charge_Response_Time\":93,\"Charging_Duration\":168,\"Downtime_Minutes\":95,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":32,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Cloudy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Saturday\",\"Total_Daily_Revenue\":46.65,\"Distance_Traveled_KM\":12.49,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO116\",\"Zone_ID\":\"Z1\",\"Battery_Level\":16,\"Battery_Health\":52,\"Ride_Count\":14,\"Ride_Duration_Min\":5,\"Ride_Revenue\":5.86,\"Charge_Response_Time\":52,\"Charging_Duration\":88,\"Downtime_Minutes\":50,\"Is_Available\":0,\"Low_Battery_Flag\":1,\"Collection_Delay_Min\":28,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Cloudy\",\"Maintenance_Flag\":1,\"Day_of_Week\":\"Wednesday\",\"Total_Daily_Revenue\":82.04,\"Distance_Traveled_KM\":6.28,\"Battery_Replacement_Required\":1},
+            {\"Scooter_ID\":\"SCOO191\",\"Zone_ID\":\"Z5\",\"Battery_Level\":39,\"Battery_Health\":72,\"Ride_Count\":17,\"Ride_Duration_Min\":21,\"Ride_Revenue\":20.14,\"Charge_Response_Time\":163,\"Charging_Duration\":134,\"Downtime_Minutes\":166,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":33,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Cloudy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Thursday\",\"Total_Daily_Revenue\":342.38,\"Distance_Traveled_KM\":2.65,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO156\",\"Zone_ID\":\"Z3\",\"Battery_Level\":79,\"Battery_Health\":78,\"Ride_Count\":17,\"Ride_Duration_Min\":40,\"Ride_Revenue\":31.7,\"Charge_Response_Time\":173,\"Charging_Duration\":145,\"Downtime_Minutes\":215,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":72,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Cloudy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Thursday\",\"Total_Daily_Revenue\":538.9,\"Distance_Traveled_KM\":14.87,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO1\",\"Zone_ID\":\"Z4\",\"Battery_Level\":40,\"Battery_Health\":67,\"Ride_Count\":11,\"Ride_Duration_Min\":43,\"Ride_Revenue\":38.97,\"Charge_Response_Time\":199,\"Charging_Duration\":81,\"Downtime_Minutes\":180,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":11,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Thursday\",\"Total_Daily_Revenue\":428.67,\"Distance_Traveled_KM\":11.36,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO30\",\"Zone_ID\":\"Z8\",\"Battery_Level\":34,\"Battery_Health\":66,\"Ride_Count\":10,\"Ride_Duration_Min\":24,\"Ride_Revenue\":25.88,\"Charge_Response_Time\":150,\"Charging_Duration\":63,\"Downtime_Minutes\":168,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":48,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Saturday\",\"Total_Daily_Revenue\":258.8,\"Distance_Traveled_KM\":13.68,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO66\",\"Zone_ID\":\"Z8\",\"Battery_Level\":80,\"Battery_Health\":58,\"Ride_Count\":19,\"Ride_Duration_Min\":11,\"Ride_Revenue\":12.87,\"Charge_Response_Time\":137,\"Charging_Duration\":96,\"Downtime_Minutes\":189,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":82,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":1,\"Day_of_Week\":\"Friday\",\"Total_Daily_Revenue\":244.53,\"Distance_Traveled_KM\":2.28,\"Battery_Replacement_Required\":1},
+            {\"Scooter_ID\":\"SCOO59\",\"Zone_ID\":\"Z6\",\"Battery_Level\":16,\"Battery_Health\":74,\"Ride_Count\":11,\"Ride_Duration_Min\":25,\"Ride_Revenue\":25.67,\"Charge_Response_Time\":153,\"Charging_Duration\":101,\"Downtime_Minutes\":161,\"Is_Available\":0,\"Low_Battery_Flag\":1,\"Collection_Delay_Min\":38,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Rainy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Saturday\",\"Total_Daily_Revenue\":282.37,\"Distance_Traveled_KM\":14.64,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO261\",\"Zone_ID\":\"Z2\",\"Battery_Level\":18,\"Battery_Health\":80,\"Ride_Count\":17,\"Ride_Duration_Min\":9,\"Ride_Revenue\":9.14,\"Charge_Response_Time\":84,\"Charging_Duration\":120,\"Downtime_Minutes\":62,\"Is_Available\":0,\"Low_Battery_Flag\":1,\"Collection_Delay_Min\":8,\"Peak_Hour_Flag\":1,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Thursday\",\"Total_Daily_Revenue\":155.38,\"Distance_Traveled_KM\":2.42,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO258\",\"Zone_ID\":\"Z7\",\"Battery_Level\":11,\"Battery_Health\":95,\"Ride_Count\":13,\"Ride_Duration_Min\":17,\"Ride_Revenue\":11.15,\"Charge_Response_Time\":187,\"Charging_Duration\":71,\"Downtime_Minutes\":222,\"Is_Available\":0,\"Low_Battery_Flag\":1,\"Collection_Delay_Min\":65,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Saturday\",\"Total_Daily_Revenue\":144.95,\"Distance_Traveled_KM\":4.27,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO121\",\"Zone_ID\":\"Z1\",\"Battery_Level\":12,\"Battery_Health\":97,\"Ride_Count\":5,\"Ride_Duration_Min\":5,\"Ride_Revenue\":5.58,\"Charge_Response_Time\":80,\"Charging_Duration\":89,\"Downtime_Minutes\":53,\"Is_Available\":0,\"Low_Battery_Flag\":1,\"Collection_Delay_Min\":3,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Cloudy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Thursday\",\"Total_Daily_Revenue\":27.9,\"Distance_Traveled_KM\":7.74,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO156\",\"Zone_ID\":\"Z10\",\"Battery_Level\":58,\"Battery_Health\":88,\"Ride_Count\":7,\"Ride_Duration_Min\":31,\"Ride_Revenue\":20.9,\"Charge_Response_Time\":48,\"Charging_Duration\":170,\"Downtime_Minutes\":84,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":66,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Rainy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Thursday\",\"Total_Daily_Revenue\":146.3,\"Distance_Traveled_KM\":7.56,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO3\",\"Zone_ID\":\"Z3\",\"Battery_Level\":62,\"Battery_Health\":69,\"Ride_Count\":19,\"Ride_Duration_Min\":32,\"Ride_Revenue\":33.19,\"Charge_Response_Time\":114,\"Charging_Duration\":45,\"Downtime_Minutes\":86,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":2,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Rainy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Friday\",\"Total_Daily_Revenue\":630.61,\"Distance_Traveled_KM\":6.6,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO285\",\"Zone_ID\":\"Z6\",\"Battery_Level\":29,\"Battery_Health\":82,\"Ride_Count\":14,\"Ride_Duration_Min\":42,\"Ride_Revenue\":33.83,\"Charge_Response_Time\":53,\"Charging_Duration\":105,\"Downtime_Minutes\":69,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":46,\"Peak_Hour_Flag\":1,\"Weather_Condition\":\"Rainy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Saturday\",\"Total_Daily_Revenue\":473.62,\"Distance_Traveled_KM\":13.95,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO199\",\"Zone_ID\":\"Z7\",\"Battery_Level\":40,\"Battery_Health\":84,\"Ride_Count\":6,\"Ride_Duration_Min\":23,\"Ride_Revenue\":27.11,\"Charge_Response_Time\":56,\"Charging_Duration\":93,\"Downtime_Minutes\":39,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":13,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Friday\",\"Total_Daily_Revenue\":162.66,\"Distance_Traveled_KM\":9.79,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO177\",\"Zone_ID\":\"Z2\",\"Battery_Level\":7,\"Battery_Health\":65,\"Ride_Count\":16,\"Ride_Duration_Min\":27,\"Ride_Revenue\":14.36,\"Charge_Response_Time\":83,\"Charging_Duration\":60,\"Downtime_Minutes\":124,\"Is_Available\":0,\"Low_Battery_Flag\":1,\"Collection_Delay_Min\":71,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Saturday\",\"Total_Daily_Revenue\":229.76,\"Distance_Traveled_KM\":4.88,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO35\",\"Zone_ID\":\"Z2\",\"Battery_Level\":96,\"Battery_Health\":85,\"Ride_Count\":16,\"Ride_Duration_Min\":30,\"Ride_Revenue\":23.15,\"Charge_Response_Time\":187,\"Charging_Duration\":72,\"Downtime_Minutes\":248,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":91,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Cloudy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Friday\",\"Total_Daily_Revenue\":370.4,\"Distance_Traveled_KM\":10.77,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO114\",\"Zone_ID\":\"Z7\",\"Battery_Level\":21,\"Battery_Health\":58,\"Ride_Count\":17,\"Ride_Duration_Min\":37,\"Ride_Revenue\":29.15,\"Charge_Response_Time\":166,\"Charging_Duration\":90,\"Downtime_Minutes\":170,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":34,\"Peak_Hour_Flag\":1,\"Weather_Condition\":\"Rainy\",\"Maintenance_Flag\":1,\"Day_of_Week\":\"Friday\",\"Total_Daily_Revenue\":495.55,\"Distance_Traveled_KM\":6.83,\"Battery_Replacement_Required\":1},
+            {\"Scooter_ID\":\"SCOO35\",\"Zone_ID\":\"Z6\",\"Battery_Level\":73,\"Battery_Health\":96,\"Ride_Count\":12,\"Ride_Duration_Min\":29,\"Ride_Revenue\":22.99,\"Charge_Response_Time\":39,\"Charging_Duration\":153,\"Downtime_Minutes\":13,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":4,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Thursday\",\"Total_Daily_Revenue\":275.88,\"Distance_Traveled_KM\":11.89,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO233\",\"Zone_ID\":\"Z1\",\"Battery_Level\":22,\"Battery_Health\":81,\"Ride_Count\":19,\"Ride_Duration_Min\":15,\"Ride_Revenue\":13.74,\"Charge_Response_Time\":95,\"Charging_Duration\":103,\"Downtime_Minutes\":91,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":26,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Friday\",\"Total_Daily_Revenue\":261.06,\"Distance_Traveled_KM\":7.56,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO192\",\"Zone_ID\":\"Z5\",\"Battery_Level\":5,\"Battery_Health\":70,\"Ride_Count\":9,\"Ride_Duration_Min\":10,\"Ride_Revenue\":9.84,\"Charge_Response_Time\":104,\"Charging_Duration\":177,\"Downtime_Minutes\":175,\"Is_Available\":0,\"Low_Battery_Flag\":1,\"Collection_Delay_Min\":101,\"Peak_Hour_Flag\":1,\"Weather_Condition\":\"Cloudy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Friday\",\"Total_Daily_Revenue\":88.56,\"Distance_Traveled_KM\":11.77,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO25\",\"Zone_ID\":\"Z10\",\"Battery_Level\":41,\"Battery_Health\":59,\"Ride_Count\":9,\"Ride_Duration_Min\":14,\"Ride_Revenue\":10.7,\"Charge_Response_Time\":87,\"Charging_Duration\":154,\"Downtime_Minutes\":57,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":0,\"Peak_Hour_Flag\":1,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":1,\"Day_of_Week\":\"Thursday\",\"Total_Daily_Revenue\":96.3,\"Distance_Traveled_KM\":3.9,\"Battery_Replacement_Required\":1},
+            {\"Scooter_ID\":\"SCOO274\",\"Zone_ID\":\"Z10\",\"Battery_Level\":69,\"Battery_Health\":98,\"Ride_Count\":16,\"Ride_Duration_Min\":44,\"Ride_Revenue\":41.04,\"Charge_Response_Time\":104,\"Charging_Duration\":116,\"Downtime_Minutes\":112,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":38,\"Peak_Hour_Flag\":1,\"Weather_Condition\":\"Rainy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Friday\",\"Total_Daily_Revenue\":656.64,\"Distance_Traveled_KM\":7.67,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO290\",\"Zone_ID\":\"Z5\",\"Battery_Level\":7,\"Battery_Health\":99,\"Ride_Count\":16,\"Ride_Duration_Min\":16,\"Ride_Revenue\":17.14,\"Charge_Response_Time\":142,\"Charging_Duration\":101,\"Downtime_Minutes\":128,\"Is_Available\":0,\"Low_Battery_Flag\":1,\"Collection_Delay_Min\":16,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Cloudy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Wednesday\",\"Total_Daily_Revenue\":274.24,\"Distance_Traveled_KM\":6.89,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO269\",\"Zone_ID\":\"Z5\",\"Battery_Level\":89,\"Battery_Health\":63,\"Ride_Count\":11,\"Ride_Duration_Min\":6,\"Ride_Revenue\":6.38,\"Charge_Response_Time\":175,\"Charging_Duration\":82,\"Downtime_Minutes\":194,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":49,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Rainy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Friday\",\"Total_Daily_Revenue\":70.18,\"Distance_Traveled_KM\":8.77,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO30\",\"Zone_ID\":\"Z8\",\"Battery_Level\":55,\"Battery_Health\":83,\"Ride_Count\":19,\"Ride_Duration_Min\":42,\"Ride_Revenue\":34.26,\"Charge_Response_Time\":39,\"Charging_Duration\":150,\"Downtime_Minutes\":59,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":50,\"Peak_Hour_Flag\":1,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Thursday\",\"Total_Daily_Revenue\":650.94,\"Distance_Traveled_KM\":3.06,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO223\",\"Zone_ID\":\"Z10\",\"Battery_Level\":60,\"Battery_Health\":66,\"Ride_Count\":8,\"Ride_Duration_Min\":14,\"Ride_Revenue\":14.54,\"Charge_Response_Time\":78,\"Charging_Duration\":78,\"Downtime_Minutes\":53,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":5,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Thursday\",\"Total_Daily_Revenue\":116.32,\"Distance_Traveled_KM\":3.93,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO178\",\"Zone_ID\":\"Z4\",\"Battery_Level\":47,\"Battery_Health\":97,\"Ride_Count\":13,\"Ride_Duration_Min\":15,\"Ride_Revenue\":8.3,\"Charge_Response_Time\":160,\"Charging_Duration\":124,\"Downtime_Minutes\":224,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":94,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Thursday\",\"Total_Daily_Revenue\":107.9,\"Distance_Traveled_KM\":13.56,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO55\",\"Zone_ID\":\"Z3\",\"Battery_Level\":71,\"Battery_Health\":76,\"Ride_Count\":17,\"Ride_Duration_Min\":33,\"Ride_Revenue\":38.98,\"Charge_Response_Time\":131,\"Charging_Duration\":95,\"Downtime_Minutes\":119,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":18,\"Peak_Hour_Flag\":1,\"Weather_Condition\":\"Rainy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Thursday\",\"Total_Daily_Revenue\":662.66,\"Distance_Traveled_KM\":4.9,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO59\",\"Zone_ID\":\"Z7\",\"Battery_Level\":65,\"Battery_Health\":71,\"Ride_Count\":9,\"Ride_Duration_Min\":25,\"Ride_Revenue\":22.1,\"Charge_Response_Time\":21,\"Charging_Duration\":134,\"Downtime_Minutes\":36,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":45,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Rainy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Saturday\",\"Total_Daily_Revenue\":198.9,\"Distance_Traveled_KM\":5.62,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO15\",\"Zone_ID\":\"Z7\",\"Battery_Level\":31,\"Battery_Health\":58,\"Ride_Count\":13,\"Ride_Duration_Min\":30,\"Ride_Revenue\":31.79,\"Charge_Response_Time\":65,\"Charging_Duration\":138,\"Downtime_Minutes\":141,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":106,\"Peak_Hour_Flag\":1,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":1,\"Day_of_Week\":\"Thursday\",\"Total_Daily_Revenue\":413.27,\"Distance_Traveled_KM\":1.04,\"Battery_Replacement_Required\":1},
+            {\"Scooter_ID\":\"SCOO252\",\"Zone_ID\":\"Z2\",\"Battery_Level\":40,\"Battery_Health\":50,\"Ride_Count\":17,\"Ride_Duration_Min\":12,\"Ride_Revenue\":12.29,\"Charge_Response_Time\":189,\"Charging_Duration\":91,\"Downtime_Minutes\":214,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":55,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Rainy\",\"Maintenance_Flag\":1,\"Day_of_Week\":\"Friday\",\"Total_Daily_Revenue\":208.93,\"Distance_Traveled_KM\":11.64,\"Battery_Replacement_Required\":1},
+            {\"Scooter_ID\":\"SCOO7\",\"Zone_ID\":\"Z6\",\"Battery_Level\":82,\"Battery_Health\":73,\"Ride_Count\":18,\"Ride_Duration_Min\":6,\"Ride_Revenue\":6.14,\"Charge_Response_Time\":196,\"Charging_Duration\":100,\"Downtime_Minutes\":280,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":114,\"Peak_Hour_Flag\":1,\"Weather_Condition\":\"Cloudy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Thursday\",\"Total_Daily_Revenue\":110.52,\"Distance_Traveled_KM\":12.82,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO81\",\"Zone_ID\":\"Z4\",\"Battery_Level\":22,\"Battery_Health\":87,\"Ride_Count\":13,\"Ride_Duration_Min\":39,\"Ride_Revenue\":30.34,\"Charge_Response_Time\":128,\"Charging_Duration\":72,\"Downtime_Minutes\":171,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":73,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Saturday\",\"Total_Daily_Revenue\":394.42,\"Distance_Traveled_KM\":3.96,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO175\",\"Zone_ID\":\"Z2\",\"Battery_Level\":94,\"Battery_Health\":93,\"Ride_Count\":8,\"Ride_Duration_Min\":29,\"Ride_Revenue\":32.58,\"Charge_Response_Time\":34,\"Charging_Duration\":112,\"Downtime_Minutes\":13,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":9,\"Peak_Hour_Flag\":1,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Saturday\",\"Total_Daily_Revenue\":260.64,\"Distance_Traveled_KM\":7.71,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO167\",\"Zone_ID\":\"Z3\",\"Battery_Level\":90,\"Battery_Health\":83,\"Ride_Count\":16,\"Ride_Duration_Min\":12,\"Ride_Revenue\":10.93,\"Charge_Response_Time\":92,\"Charging_Duration\":86,\"Downtime_Minutes\":102,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":40,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Rainy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Saturday\",\"Total_Daily_Revenue\":174.88,\"Distance_Traveled_KM\":9.51,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO191\",\"Zone_ID\":\"Z8\",\"Battery_Level\":63,\"Battery_Health\":94,\"Ride_Count\":5,\"Ride_Duration_Min\":10,\"Ride_Revenue\":9.24,\"Charge_Response_Time\":190,\"Charging_Duration\":65,\"Downtime_Minutes\":229,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":69,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Rainy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Thursday\",\"Total_Daily_Revenue\":46.2,\"Distance_Traveled_KM\":3.61,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO174\",\"Zone_ID\":\"Z10\",\"Battery_Level\":66,\"Battery_Health\":79,\"Ride_Count\":13,\"Ride_Duration_Min\":35,\"Ride_Revenue\":18.86,\"Charge_Response_Time\":140,\"Charging_Duration\":75,\"Downtime_Minutes\":149,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":39,\"Peak_Hour_Flag\":1,\"Weather_Condition\":\"Cloudy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Thursday\",\"Total_Daily_Revenue\":245.18,\"Distance_Traveled_KM\":13.55,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO300\",\"Zone_ID\":\"Z1\",\"Battery_Level\":88,\"Battery_Health\":77,\"Ride_Count\":10,\"Ride_Duration_Min\":15,\"Ride_Revenue\":16.59,\"Charge_Response_Time\":127,\"Charging_Duration\":157,\"Downtime_Minutes\":190,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":93,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Cloudy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Saturday\",\"Total_Daily_Revenue\":165.9,\"Distance_Traveled_KM\":12.49,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO269\",\"Zone_ID\":\"Z5\",\"Battery_Level\":70,\"Battery_Health\":64,\"Ride_Count\":7,\"Ride_Duration_Min\":15,\"Ride_Revenue\":13.5,\"Charge_Response_Time\":182,\"Charging_Duration\":88,\"Downtime_Minutes\":156,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":4,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Rainy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Friday\",\"Total_Daily_Revenue\":94.5,\"Distance_Traveled_KM\":10.95,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO143\",\"Zone_ID\":\"Z3\",\"Battery_Level\":88,\"Battery_Health\":82,\"Ride_Count\":19,\"Ride_Duration_Min\":24,\"Ride_Revenue\":16.07,\"Charge_Response_Time\":10,\"Charging_Duration\":134,\"Downtime_Minutes\":0,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":13,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Friday\",\"Total_Daily_Revenue\":305.33,\"Distance_Traveled_KM\":8.09,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO37\",\"Zone_ID\":\"Z5\",\"Battery_Level\":81,\"Battery_Health\":92,\"Ride_Count\":6,\"Ride_Duration_Min\":7,\"Ride_Revenue\":3.75,\"Charge_Response_Time\":19,\"Charging_Duration\":49,\"Downtime_Minutes\":11,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":22,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Rainy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Thursday\",\"Total_Daily_Revenue\":22.5,\"Distance_Traveled_KM\":5.51,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO122\",\"Zone_ID\":\"Z5\",\"Battery_Level\":6,\"Battery_Health\":69,\"Ride_Count\":13,\"Ride_Duration_Min\":5,\"Ride_Revenue\":2.99,\"Charge_Response_Time\":26,\"Charging_Duration\":53,\"Downtime_Minutes\":70,\"Is_Available\":0,\"Low_Battery_Flag\":1,\"Collection_Delay_Min\":74,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Rainy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Friday\",\"Total_Daily_Revenue\":38.87,\"Distance_Traveled_KM\":6.77,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO222\",\"Zone_ID\":\"Z7\",\"Battery_Level\":98,\"Battery_Health\":80,\"Ride_Count\":16,\"Ride_Duration_Min\":9,\"Ride_Revenue\":9.73,\"Charge_Response_Time\":187,\"Charging_Duration\":122,\"Downtime_Minutes\":273,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":116,\"Peak_Hour_Flag\":1,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Thursday\",\"Total_Daily_Revenue\":155.68,\"Distance_Traveled_KM\":3.87,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO164\",\"Zone_ID\":\"Z9\",\"Battery_Level\":39,\"Battery_Health\":50,\"Ride_Count\":16,\"Ride_Duration_Min\":44,\"Ride_Revenue\":44.23,\"Charge_Response_Time\":73,\"Charging_Duration\":137,\"Downtime_Minutes\":114,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":71,\"Peak_Hour_Flag\":1,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":1,\"Day_of_Week\":\"Friday\",\"Total_Daily_Revenue\":707.68,\"Distance_Traveled_KM\":3.82,\"Battery_Replacement_Required\":1},
+            {\"Scooter_ID\":\"SCOO194\",\"Zone_ID\":\"Z10\",\"Battery_Level\":34,\"Battery_Health\":84,\"Ride_Count\":7,\"Ride_Duration_Min\":25,\"Ride_Revenue\":15.76,\"Charge_Response_Time\":132,\"Charging_Duration\":122,\"Downtime_Minutes\":127,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":25,\"Peak_Hour_Flag\":1,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Thursday\",\"Total_Daily_Revenue\":110.32,\"Distance_Traveled_KM\":13.28,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO90\",\"Zone_ID\":\"Z7\",\"Battery_Level\":93,\"Battery_Health\":67,\"Ride_Count\":12,\"Ride_Duration_Min\":44,\"Ride_Revenue\":35.92,\"Charge_Response_Time\":23,\"Charging_Duration\":76,\"Downtime_Minutes\":43,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":50,\"Peak_Hour_Flag\":1,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Friday\",\"Total_Daily_Revenue\":431.04,\"Distance_Traveled_KM\":11.47,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO41\",\"Zone_ID\":\"Z1\",\"Battery_Level\":19,\"Battery_Health\":82,\"Ride_Count\":19,\"Ride_Duration_Min\":29,\"Ride_Revenue\":21.71,\"Charge_Response_Time\":62,\"Charging_Duration\":148,\"Downtime_Minutes\":135,\"Is_Available\":0,\"Low_Battery_Flag\":1,\"Collection_Delay_Min\":103,\"Peak_Hour_Flag\":1,\"Weather_Condition\":\"Cloudy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Thursday\",\"Total_Daily_Revenue\":412.49,\"Distance_Traveled_KM\":7.04,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO73\",\"Zone_ID\":\"Z3\",\"Battery_Level\":71,\"Battery_Health\":56,\"Ride_Count\":8,\"Ride_Duration_Min\":12,\"Ride_Revenue\":11.83,\"Charge_Response_Time\":24,\"Charging_Duration\":155,\"Downtime_Minutes\":22,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":28,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Rainy\",\"Maintenance_Flag\":1,\"Day_of_Week\":\"Friday\",\"Total_Daily_Revenue\":94.64,\"Distance_Traveled_KM\":13.51,\"Battery_Replacement_Required\":1},
+            {\"Scooter_ID\":\"SCOO81\",\"Zone_ID\":\"Z8\",\"Battery_Level\":40,\"Battery_Health\":78,\"Ride_Count\":17,\"Ride_Duration_Min\":42,\"Ride_Revenue\":43.12,\"Charge_Response_Time\":164,\"Charging_Duration\":77,\"Downtime_Minutes\":201,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":67,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Rainy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Friday\",\"Total_Daily_Revenue\":733.04,\"Distance_Traveled_KM\":7.92,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO216\",\"Zone_ID\":\"Z9\",\"Battery_Level\":78,\"Battery_Health\":82,\"Ride_Count\":19,\"Ride_Duration_Min\":42,\"Ride_Revenue\":36.77,\"Charge_Response_Time\":118,\"Charging_Duration\":59,\"Downtime_Minutes\":116,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":28,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Friday\",\"Total_Daily_Revenue\":698.63,\"Distance_Traveled_KM\":4.21,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO281\",\"Zone_ID\":\"Z1\",\"Battery_Level\":80,\"Battery_Health\":94,\"Ride_Count\":7,\"Ride_Duration_Min\":6,\"Ride_Revenue\":3.05,\"Charge_Response_Time\":173,\"Charging_Duration\":80,\"Downtime_Minutes\":168,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":25,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Thursday\",\"Total_Daily_Revenue\":21.35,\"Distance_Traveled_KM\":12.58,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO137\",\"Zone_ID\":\"Z3\",\"Battery_Level\":78,\"Battery_Health\":89,\"Ride_Count\":11,\"Ride_Duration_Min\":42,\"Ride_Revenue\":27.68,\"Charge_Response_Time\":56,\"Charging_Duration\":134,\"Downtime_Minutes\":71,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":45,\"Peak_Hour_Flag\":1,\"Weather_Condition\":\"Rainy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Friday\",\"Total_Daily_Revenue\":304.48,\"Distance_Traveled_KM\":9.21,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO165\",\"Zone_ID\":\"Z6\",\"Battery_Level\":66,\"Battery_Health\":67,\"Ride_Count\":12,\"Ride_Duration_Min\":29,\"Ride_Revenue\":19.7,\"Charge_Response_Time\":69,\"Charging_Duration\":144,\"Downtime_Minutes\":150,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":111,\"Peak_Hour_Flag\":1,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Thursday\",\"Total_Daily_Revenue\":236.4,\"Distance_Traveled_KM\":10.9,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO136\",\"Zone_ID\":\"Z7\",\"Battery_Level\":96,\"Battery_Health\":80,\"Ride_Count\":17,\"Ride_Duration_Min\":13,\"Ride_Revenue\":10.36,\"Charge_Response_Time\":49,\"Charging_Duration\":85,\"Downtime_Minutes\":104,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":85,\"Peak_Hour_Flag\":1,\"Weather_Condition\":\"Sunny\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Saturday\",\"Total_Daily_Revenue\":176.12,\"Distance_Traveled_KM\":2.59,\"Battery_Replacement_Required\":0},
+            {\"Scooter_ID\":\"SCOO149\",\"Zone_ID\":\"Z1\",\"Battery_Level\":25,\"Battery_Health\":75,\"Ride_Count\":13,\"Ride_Duration_Min\":40,\"Ride_Revenue\":23.49,\"Charge_Response_Time\":10,\"Charging_Duration\":107,\"Downtime_Minutes\":33,\"Is_Available\":1,\"Low_Battery_Flag\":0,\"Collection_Delay_Min\":53,\"Peak_Hour_Flag\":0,\"Weather_Condition\":\"Cloudy\",\"Maintenance_Flag\":0,\"Day_of_Week\":\"Saturday\",\"Total_Daily_Revenue\":305.37,\"Distance_Traveled_KM\":6.59,\"Battery_Replacement_Required\":0}
+        ];
+
+        // Global state
+        let filteredData = [...rawData];
+        let charts = {};
+
+        // Initialize filters
+        function initFilters() {
+            const zones = [...new Set(rawData.map(d => d.Zone_ID))].sort();
+            const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+            const weather = [...new Set(rawData.map(d => d.Weather_Condition))].sort();
+
+            const zoneFilter = document.getElementById('zoneFilter');
+            zones.forEach(z => {
+                const opt = document.createElement('option');
+                opt.value = z;
+                opt.textContent = z;
+                zoneFilter.appendChild(opt);
+            });
+
+            const dayFilter = document.getElementById('dayFilter');
+            days.forEach(d => {
+                if (rawData.some(r => r.Day_of_Week === d)) {
+                    const opt = document.createElement('option');
+                    opt.value = d;
+                    opt.textContent = d;
+                    dayFilter.appendChild(opt);
+                }
+            });
+
+            const weatherFilter = document.getElementById('weatherFilter');
+            weather.forEach(w => {
+                const opt = document.createElement('option');
+                opt.value = w;
+                opt.textContent = w;
+                weatherFilter.appendChild(opt);
+            });
+        }
+
+        // Apply filters
+        function applyFilters() {
+            const zone = document.getElementById('zoneFilter').value;
+            const day = document.getElementById('dayFilter').value;
+            const weather = document.getElementById('weatherFilter').value;
+            const peak = document.getElementById('peakFilter').value;
+
+            filteredData = rawData.filter(d => {
+                if (zone !== 'all' && d.Zone_ID !== zone) return false;
+                if (day !== 'all' && d.Day_of_Week !== day) return false;
+                if (weather !== 'all' && d.Weather_Condition !== weather) return false;
+                if (peak !== 'all' && d.Peak_Hour_Flag !== parseInt(peak)) return false;
+                return true;
+            });
+
+            updateKPIs();
+            updateAllCharts();
+        }
+
+        // Update KPIs
+        function updateKPIs() {
+            const totalDowntime = filteredData.reduce((s, d) => s + d.Downtime_Minutes, 0);
+            const totalRevenue = filteredData.reduce((s, d) => s + d.Total_Daily_Revenue, 0);
+            const avgBatteryHealth = filteredData.reduce((s, d) => s + d.Battery_Health, 0) / filteredData.length;
+            const lowBatteryCount = filteredData.filter(d => d.Low_Battery_Flag === 1).length;
+            const availabilityRate = (filteredData.filter(d => d.Is_Available === 1).length / filteredData.length * 100);
+
+            document.getElementById('kpiGrid').innerHTML = `
+                <div class=\"kpi-card\">
+                    <div class=\"kpi-label\">Total Records</div>
+                    <div class=\"kpi-value\">${filteredData.length}</div>
+                    <div class=\"kpi-subtext\">scooter observations</div>
+                </div>
+                <div class=\"kpi-card info\">
+                    <div class=\"kpi-label\">Total Revenue</div>
+                    <div class=\"kpi-value\">$${totalRevenue.toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
+                    <div class=\"kpi-subtext\">daily revenue sum</div>
+                </div>
+                <div class=\"kpi-card warning\">
+                    <div class=\"kpi-label\">Total Downtime</div>
+                    <div class=\"kpi-value\">${(totalDowntime / 60).toFixed(0)}h</div>
+                    <div class=\"kpi-subtext\">${totalDowntime.toLocaleString()} minutes</div>
+                </div>
+                <div class=\"kpi-card danger\">
+                    <div class=\"kpi-label\">Low Battery Events</div>
+                    <div class=\"kpi-value\">${lowBatteryCount}</div>
+                    <div class=\"kpi-subtext\">${(lowBatteryCount / filteredData.length * 100).toFixed(1)}% of fleet</div>
+                </div>
+                <div class=\"kpi-card purple\">
+                    <div class=\"kpi-label\">Avg Battery Health</div>
+                    <div class=\"kpi-value\">${avgBatteryHealth.toFixed(0)}%</div>
+                    <div class=\"kpi-subtext\">fleet average</div>
+                </div>
+                <div class=\"kpi-card\">
+                    <div class=\"kpi-label\">Availability Rate</div>
+                    <div class=\"kpi-value\">${availabilityRate.toFixed(1)}%</div>
+                    <div class=\"kpi-subtext\">scooters available</div>
+                </div>
+            `;
+        }
+
+        // Chart 1: Downtime Attribution
+        function createDowntimeChart() {
+            const ctx = document.getElementById('downtimeChart').getContext('2d');
+            
+            const lowBatteryDowntime = filteredData
+                .filter(d => d.Low_Battery_Flag === 1)
+                .reduce((s, d) => s + d.Downtime_Minutes, 0);
+            
+            const maintenanceDowntime = filteredData
+                .filter(d => d.Maintenance_Flag === 1)
+                .reduce((s, d) => s + d.Downtime_Minutes, 0);
+            
+            const totalDowntime = filteredData.reduce((s, d) => s + d.Downtime_Minutes, 0);
+            const otherDowntime = totalDowntime - lowBatteryDowntime - maintenanceDowntime;
+            
+            const lowBatteryPct = (lowBatteryDowntime / totalDowntime * 100).toFixed(1);
+            const maintenancePct = (maintenanceDowntime / totalDowntime * 100).toFixed(1);
+            const otherPct = (otherDowntime / totalDowntime * 100).toFixed(1);
+
+            if (charts.downtime) charts.downtime.destroy();
+            
+            charts.downtime = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Low Battery', 'Maintenance', 'Other Causes'],
+                    datasets: [{
+                        data: [lowBatteryDowntime, maintenanceDowntime, otherDowntime],
+                        backgroundColor: ['#ef4444', '#f59e0b', '#64748b'],
+                        borderColor: '#151c25',
+                        borderWidth: 3,
+                        hoverOffset: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '65%',
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                color: '#94a3b8',
+                                padding: 16,
+                                font: { size: 12, family: 'IBM Plex Sans' },
+                                usePointStyle: true,
+                                pointStyle: 'circle'
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: '#1a222c',
+                            titleColor: '#f1f5f9',
+                            bodyColor: '#94a3b8',
+                            borderColor: '#1e293b',
+                            borderWidth: 1,
+                            padding: 12,
+                            callbacks: {
+                                label: function(context) {
+                                    const pct = (context.raw / totalDowntime * 100).toFixed(1);
+                                    return `${context.label}: ${context.raw.toLocaleString()} min (${pct}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            document.getElementById('downtimeInsight').innerHTML = `
+                <p><strong>${lowBatteryPct}%</strong> of total downtime (${lowBatteryDowntime.toLocaleString()} minutes) is directly caused by low battery events. 
+                Maintenance contributes <strong>${maintenancePct}%</strong> (${maintenanceDowntime.toLocaleString()} min), while other operational factors account for ${otherPct}%.</p>
+            `;
+        }
+
+        // Chart 2: Charging Response Time Impact
+        function createResponseChart() {
+            const ctx = document.getElementById('responseChart').getContext('2d');
+            
+            const scatterData = filteredData.map(d => ({
+                x: d.Charge_Response_Time,
+                y: d.Downtime_Minutes
+            }));
+
+            // Calculate correlation
+            const n = filteredData.length;
+            const sumX = filteredData.reduce((s, d) => s + d.Charge_Response_Time, 0);
+            const sumY = filteredData.reduce((s, d) => s + d.Downtime_Minutes, 0);
+            const sumXY = filteredData.reduce((s, d) => s + d.Charge_Response_Time * d.Downtime_Minutes, 0);
+            const sumX2 = filteredData.reduce((s, d) => s + d.Charge_Response_Time ** 2, 0);
+            const sumY2 = filteredData.reduce((s, d) => s + d.Downtime_Minutes ** 2, 0);
+            
+            const correlation = (n * sumXY - sumX * sumY) / 
+                Math.sqrt((n * sumX2 - sumX ** 2) * (n * sumY2 - sumY ** 2));
+
+            // Trendline
+            const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX ** 2);
+            const intercept = (sumY - slope * sumX) / n;
+
+            if (charts.response) charts.response.destroy();
+            
+            charts.response = new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Scooter Observations',
+                        data: scatterData,
+                        backgroundColor: 'rgba(14, 165, 233, 0.5)',
+                        borderColor: '#0ea5e9',
+                        borderWidth: 1,
+                        pointRadius: 5,
+                        pointHoverRadius: 8
+                    }, {
+                        label: 'Trend Line',
+                        data: [
+                            { x: 0, y: intercept },
+                            { x: 200, y: slope * 200 + intercept }
+                        ],
+                        type: 'line',
+                        borderColor: '#00d4aa',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Charge Response Time (min)',
+                                color: '#94a3b8',
+                                font: { size: 12 }
+                            },
+                            grid: { color: '#1e293b' },
+                            ticks: { color: '#64748b' }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Downtime (min)',
+                                color: '#94a3b8',
+                                font: { size: 12 }
+                            },
+                            grid: { color: '#1e293b' },
+                            ticks: { color: '#64748b' }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: { color: '#94a3b8', usePointStyle: true }
+                        },
+                        tooltip: {
+                            backgroundColor: '#1a222c',
+                            titleColor: '#f1f5f9',
+                            bodyColor: '#94a3b8',
+                            borderColor: '#1e293b',
+                            borderWidth: 1
+                        }
+                    }
+                }
+            });
+
+            const corrStrength = Math.abs(correlation) > 0.5 ? 'strong' : Math.abs(correlation) > 0.3 ? 'moderate' : 'weak';
+            const corrDirection = correlation > 0 ? 'positive' : 'negative';
+            
+            document.getElementById('responseInsight').innerHTML = `
+                <p>Correlation coefficient: <strong>r = ${correlation.toFixed(3)}</strong> indicates a <strong>${corrStrength} ${corrDirection}</strong> relationship. 
+                ${correlation > 0 ? 'Longer charging response times are associated with increased downtime.' : 'Faster response times correlate with reduced downtime.'} 
+                The trend line suggests that every additional minute of response delay adds approximately <strong>${slope.toFixed(2)} minutes</strong> of downtime.</p>
+            `;
+        }
+
+        // Chart 3: Zone-Level Battery Unavailability
+        function createZoneChart() {
+            const ctx = document.getElementById('zoneChart').getContext('2d');
+            
+            const zoneStats = {};
+            filteredData.forEach(d => {
+                if (!zoneStats[d.Zone_ID]) {
+                    zoneStats[d.Zone_ID] = { total: 0, lowBattery: 0, unavailable: 0, downtime: 0 };
+                }
+                zoneStats[d.Zone_ID].total++;
+                if (d.Low_Battery_Flag === 1) zoneStats[d.Zone_ID].lowBattery++;
+                if (d.Is_Available === 0) zoneStats[d.Zone_ID].unavailable++;
+                zoneStats[d.Zone_ID].downtime += d.Downtime_Minutes;
+            });
+
+            const zones = Object.keys(zoneStats).sort();
+            const unavailabilityRates = zones.map(z => (zoneStats[z].unavailable / zoneStats[z].total * 100));
+            const lowBatteryRates = zones.map(z => (zoneStats[z].lowBattery / zoneStats[z].total * 100));
+            const avgDowntime = zones.map(z => zoneStats[z].downtime / zoneStats[z].total);
+
+            if (charts.zone) charts.zone.destroy();
+            
+            charts.zone = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: zones,
+                    datasets: [{
+                        label: 'Unavailability Rate (%)',
+                        data: unavailabilityRates,
+                        backgroundColor: '#ef4444',
+                        borderRadius: 4,
+                        yAxisID: 'y'
+                    }, {
+                        label: 'Low Battery Rate (%)',
+                        data: lowBatteryRates,
+                        backgroundColor: '#f59e0b',
+                        borderRadius: 4,
+                        yAxisID: 'y'
+                    }, {
+                        label: 'Avg Downtime (min)',
+                        data: avgDowntime,
+                        type: 'line',
+                        borderColor: '#00d4aa',
+                        backgroundColor: 'rgba(0, 212, 170, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#00d4aa',
+                        fill: true,
+                        yAxisID: 'y1'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#64748b' }
+                        },
+                        y: {
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Rate (%)',
+                                color: '#94a3b8'
+                            },
+                            grid: { color: '#1e293b' },
+                            ticks: { color: '#64748b' }
+                        },
+                        y1: {
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Avg Downtime (min)',
+                                color: '#94a3b8'
+                            },
+                            grid: { display: false },
+                            ticks: { color: '#64748b' }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: { color: '#94a3b8', usePointStyle: true, padding: 16 }
+                        },
+                        tooltip: {
+                            backgroundColor: '#1a222c',
+                            titleColor: '#f1f5f9',
+                            bodyColor: '#94a3b8',
+                            borderColor: '#1e293b',
+                            borderWidth: 1
+                        }
+                    }
+                }
+            });
+
+            const worstZone = zones[unavailabilityRates.indexOf(Math.max(...unavailabilityRates))];
+            const worstRate = Math.max(...unavailabilityRates).toFixed(1);
+            
+            document.getElementById('zoneInsight').innerHTML = `
+                <p><strong>${worstZone}</strong> has the highest battery-related unavailability at <strong>${worstRate}%</strong>. 
+                Zones with high unavailability rates combined with elevated low-battery incidents should be prioritized for charging infrastructure improvements and technician deployment optimization.</p>
+            `;
+        }
+
+        // Chart 4: Battery Health vs Maintenance
+        function createHealthChart() {
+            const ctx = document.getElementById('healthChart').getContext('2d');
+            
+            const healthBuckets = {
+                'Critical (<60%)': { maintenance: 0, noMaintenance: 0, downtimeSum: 0, count: 0 },
+                'Fair (60-75%)': { maintenance: 0, noMaintenance: 0, downtimeSum: 0, count: 0 },
+                'Good (75-90%)': { maintenance: 0, noMaintenance: 0, downtimeSum: 0, count: 0 },
+                'Excellent (>90%)': { maintenance: 0, noMaintenance: 0, downtimeSum: 0, count: 0 }
+            };
+
+            filteredData.forEach(d => {
+                let bucket;
+                if (d.Battery_Health < 60) bucket = 'Critical (<60%)';
+                else if (d.Battery_Health < 75) bucket = 'Fair (60-75%)';
+                else if (d.Battery_Health < 90) bucket = 'Good (75-90%)';
+                else bucket = 'Excellent (>90%)';
+
+                healthBuckets[bucket].count++;
+                healthBuckets[bucket].downtimeSum += d.Downtime_Minutes;
+                if (d.Maintenance_Flag === 1) {
+                    healthBuckets[bucket].maintenance++;
+                } else {
+                    healthBuckets[bucket].noMaintenance++;
+                }
+            });
+
+            const labels = Object.keys(healthBuckets);
+            const maintenanceRates = labels.map(l => 
+                healthBuckets[l].count > 0 ? (healthBuckets[l].maintenance / healthBuckets[l].count * 100) : 0
+            );
+            const avgDowntime = labels.map(l => 
+                healthBuckets[l].count > 0 ? (healthBuckets[l].downtimeSum / healthBuckets[l].count) : 0
+            );
+
+            if (charts.health) charts.health.destroy();
+            
+            charts.health = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Maintenance Rate (%)',
+                        data: maintenanceRates,
+                        backgroundColor: ['#ef4444', '#f59e0b', '#0ea5e9', '#00d4aa'],
+                        borderRadius: 6,
+                        barPercentage: 0.7
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Maintenance Occurrence Rate (%)',
+                                color: '#94a3b8'
+                            },
+                            grid: { color: '#1e293b' },
+                            ticks: { color: '#64748b' }
+                        },
+                        y: {
+                            grid: { display: false },
+                            ticks: { color: '#94a3b8', font: { size: 11 } }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#1a222c',
+                            titleColor: '#f1f5f9',
+                            bodyColor: '#94a3b8',
+                            borderColor: '#1e293b',
+                            borderWidth: 1,
+                            callbacks: {
+                                afterLabel: function(context) {
+                                    const idx = context.dataIndex;
+                                    return `Avg Downtime: ${avgDowntime[idx].toFixed(0)} min`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            const criticalRate = maintenanceRates[0].toFixed(1);
+            const excellentRate = maintenanceRates[3].toFixed(1);
+            
+            document.getElementById('healthInsight').innerHTML = `
+                <p>Scooters with <strong>critical battery health (&lt;60%)</strong> show a maintenance rate of <strong>${criticalRate}%</strong>, compared to only <strong>${excellentRate}%</strong> for excellent condition batteries. 
+                This ${(maintenanceRates[0] / (maintenanceRates[3] || 1)).toFixed(1)}x difference demonstrates the strong correlation between battery degradation and maintenance requirements.</p>
+            `;
+        }
+
+        // Chart 5: Peak Hour Downtime vs Revenue
+        function createRevenueChart() {
+            const ctx = document.getElementById('revenueChart').getContext('2d');
+            
+            const peakData = filteredData.filter(d => d.Peak_Hour_Flag === 1);
+            const offPeakData = filteredData.filter(d => d.Peak_Hour_Flag === 0);
+
+            // Create downtime buckets
+            const buckets = ['0-50', '51-100', '101-150', '151-200', '200+'];
+            
+            function getBucket(downtime) {
+                if (downtime <= 50) return 0;
+                if (downtime <= 100) return 1;
+                if (downtime <= 150) return 2;
+                if (downtime <= 200) return 3;
+                return 4;
+            }
+
+            const peakRevenue = [0, 0, 0, 0, 0];
+            const peakCount = [0, 0, 0, 0, 0];
+            const offPeakRevenue = [0, 0, 0, 0, 0];
+            const offPeakCount = [0, 0, 0, 0, 0];
+
+            peakData.forEach(d => {
+                const idx = getBucket(d.Downtime_Minutes);
+                peakRevenue[idx] += d.Total_Daily_Revenue;
+                peakCount[idx]++;
+            });
+
+            offPeakData.forEach(d => {
+                const idx = getBucket(d.Downtime_Minutes);
+                offPeakRevenue[idx] += d.Total_Daily_Revenue;
+                offPeakCount[idx]++;
+            });
+
+            const avgPeakRevenue = peakRevenue.map((r, i) => peakCount[i] > 0 ? r / peakCount[i] : 0);
+            const avgOffPeakRevenue = offPeakRevenue.map((r, i) => offPeakCount[i] > 0 ? r / offPeakCount[i] : 0);
+
+            if (charts.revenue) charts.revenue.destroy();
+            
+            charts.revenue = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: buckets.map(b => b + ' min'),
+                    datasets: [{
+                        label: 'Peak Hours Avg Revenue',
+                        data: avgPeakRevenue,
+                        borderColor: '#00d4aa',
+                        backgroundColor: 'rgba(0, 212, 170, 0.15)',
+                        borderWidth: 3,
+                        pointRadius: 6,
+                        pointBackgroundColor: '#00d4aa',
+                        pointBorderColor: '#151c25',
+                        pointBorderWidth: 2,
+                        fill: true,
+                        tension: 0.3
+                    }, {
+                        label: 'Off-Peak Avg Revenue',
+                        data: avgOffPeakRevenue,
+                        borderColor: '#64748b',
+                        backgroundColor: 'rgba(100, 116, 139, 0.1)',
+                        borderWidth: 3,
+                        pointRadius: 6,
+                        pointBackgroundColor: '#64748b',
+                        pointBorderColor: '#151c25',
+                        pointBorderWidth: 2,
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Downtime Bucket',
+                                color: '#94a3b8',
+                                font: { size: 12 }
+                            },
+                            grid: { color: '#1e293b' },
+                            ticks: { color: '#64748b' }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Average Daily Revenue ($)',
+                                color: '#94a3b8',
+                                font: { size: 12 }
+                            },
+                            grid: { color: '#1e293b' },
+                            ticks: { 
+                                color: '#64748b',
+                                callback: value => '$' + value.toFixed(0)
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: { color: '#94a3b8', usePointStyle: true, padding: 20 }
+                        },
+                        tooltip: {
+                            backgroundColor: '#1a222c',
+                            titleColor: '#f1f5f9',
+                            bodyColor: '#94a3b8',
+                            borderColor: '#1e293b',
+                            borderWidth: 1,
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': $' + context.raw.toFixed(2);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            const peakLowDowntime = avgPeakRevenue[0];
+            const peakHighDowntime = avgPeakRevenue[4];
+            const revenueLoss = peakLowDowntime - peakHighDowntime;
+            
+            document.getElementById('revenueInsight').innerHTML = `
+                <p>During <strong>peak hours</strong>, scooters with minimal downtime (0-50 min) generate an average of <strong>$${peakLowDowntime.toFixed(2)}</strong> daily, 
+                while those with high downtime (200+ min) average only <strong>$${peakHighDowntime.toFixed(2)}</strong>. 
+                This represents a potential revenue loss of <strong>$${revenueLoss.toFixed(2)}</strong> per scooter per day during peak demand periods.</p>
+            `;
+        }
+
+        // Update all charts
+        function updateAllCharts() {
+            createDowntimeChart();
+            createResponseChart();
+            createZoneChart();
+            createHealthChart();
+            createRevenueChart();
+        }
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            initFilters();
+            updateKPIs();
+            updateAllCharts();
+        });
+    </script>
+</body>
+</html>
+"
